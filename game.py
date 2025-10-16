@@ -4,6 +4,8 @@ import random
 WIDTH = 512
 HEIGHT = 448
 
+mouse_pos = (0, 0)
+
 class Character:
     def __init__(self):
         self.actor = Actor('character')
@@ -29,6 +31,54 @@ class Tile:
     
     def draw(self):
         self.actor.draw()
+
+class MainMenuButton:
+    def __init__(self, text, pos):
+        x, y = pos
+        self.text = text
+        self.pos = pos
+        self.rect = Rect((x - 40, y - 14), (80, 28))
+    
+    def draw(self, color, owidth=0):
+        screen.draw.text(self.text, center=self.pos, color=color, ocolor='black', owidth=owidth, fontsize=32)
+        screen.draw.rect(self.rect, 'green')
+
+class MainMenuScene:
+    def __init__(self):
+        self.background = Actor('background')
+        self.buttons = [
+            MainMenuButton('Play', (256, 196)),
+            MainMenuButton('Music', (256, 224)),
+            MainMenuButton('Quit', (256, 252))
+        ]
+        self.selected_button_index = 0
+        self.last_mouse_pos = mouse_pos
+    
+    def draw(self):
+        self.background.draw()
+        for i in range(len(self.buttons)):
+            if i == self.selected_button_index:
+                self.buttons[i].draw('orange', 1)
+            else:
+                self.buttons[i].draw('white')
+    
+    def update(self):
+        if self.last_mouse_pos != mouse_pos:
+            for i in range(len(self.buttons)):
+                if self.buttons[i].rect.collidepoint(mouse_pos):
+                    self.selected_button_index = i
+                    break
+        self.last_mouse_pos = mouse_pos
+    
+    def on_key_down(self, key):
+        if key == keys.UP:
+            self.selected_button_index -= 1
+            if self.selected_button_index < 0:
+                self.selected_button_index = len(self.buttons) - 1
+        elif key == keys.DOWN:
+            self.selected_button_index += 1
+            if self.selected_button_index >= len(self.buttons):
+                self.selected_button_index = 0
 
 def create_tiles_from_tileset(tileset):
     result = []
@@ -59,13 +109,19 @@ tileset = [
 ]
 tiles = create_tiles_from_tileset(tileset)
 
+current_scene = MainMenuScene()
+
 def draw():
-    background.draw()
-    for tile in tiles:
-        tile.draw()
-    character.draw()
+    current_scene.draw()
 
 def update():
-    character.update(keyboard)
+    current_scene.update()
+
+def on_key_down(key):
+    current_scene.on_key_down(key)
+
+def on_mouse_move(pos):
+    global mouse_pos
+    mouse_pos = pos
 
 pgzrun.go()
