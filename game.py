@@ -6,14 +6,7 @@ HEIGHT = 448
 
 mouse_pos = (0, 0)
 
-def on_play_pressed():
-    print('play!')
-
-def on_music_pressed():
-    print('music!')
-
-def on_quit_pressed():
-    quit()
+current_scene = None
 
 class Character:
     def __init__(self):
@@ -52,6 +45,29 @@ class MainMenuButton:
     def draw(self, color, owidth=0):
         screen.draw.text(self.text, center=self.pos, color=color, ocolor='black', owidth=owidth, fontsize=32)
         screen.draw.rect(self.rect, 'green')
+
+class GameScene:
+    def __init__(self):
+        pass
+    
+    def draw(self):
+        screen.clear()
+    
+    def update(self, dt):
+        pass
+    
+    def on_key_down(self, key):
+        pass
+
+def on_play_pressed():
+    global current_scene
+    current_scene = GameScene()
+
+def on_music_pressed():
+    print('music!')
+
+def on_quit_pressed():
+    quit()
 
 class MainMenuScene:
     def __init__(self):
