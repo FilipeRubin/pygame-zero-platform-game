@@ -6,6 +6,15 @@ HEIGHT = 448
 
 mouse_pos = (0, 0)
 
+def on_play_pressed():
+    print('play!')
+
+def on_music_pressed():
+    print('music!')
+
+def on_quit_pressed():
+    quit()
+
 class Character:
     def __init__(self):
         self.actor = Actor('character')
@@ -33,11 +42,12 @@ class Tile:
         self.actor.draw()
 
 class MainMenuButton:
-    def __init__(self, text, pos):
+    def __init__(self, text, pos, on_pressed):
         x, y = pos
         self.text = text
         self.pos = pos
         self.rect = Rect((x - 40, y - 14), (80, 28))
+        self.on_pressed = on_pressed
     
     def draw(self, color, owidth=0):
         screen.draw.text(self.text, center=self.pos, color=color, ocolor='black', owidth=owidth, fontsize=32)
@@ -47,9 +57,9 @@ class MainMenuScene:
     def __init__(self):
         self.background = Actor('background')
         self.buttons = [
-            MainMenuButton('Play', (256, 196)),
-            MainMenuButton('Music', (256, 224)),
-            MainMenuButton('Quit', (256, 252))
+            MainMenuButton('Play', (256, 196), on_play_pressed),
+            MainMenuButton('Music', (256, 224), on_music_pressed),
+            MainMenuButton('Quit', (256, 252), on_quit_pressed)
         ]
         self.selected_button_index = 0
         self.last_mouse_pos = mouse_pos
@@ -62,7 +72,7 @@ class MainMenuScene:
             else:
                 self.buttons[i].draw('white')
     
-    def update(self):
+    def update(self, dt):
         if self.last_mouse_pos != mouse_pos:
             for i in range(len(self.buttons)):
                 if self.buttons[i].rect.collidepoint(mouse_pos):
@@ -79,6 +89,8 @@ class MainMenuScene:
             self.selected_button_index += 1
             if self.selected_button_index >= len(self.buttons):
                 self.selected_button_index = 0
+        elif key == keys.RETURN:
+            self.buttons[self.selected_button_index].on_pressed()
 
 def create_tiles_from_tileset(tileset):
     result = []
@@ -114,8 +126,8 @@ current_scene = MainMenuScene()
 def draw():
     current_scene.draw()
 
-def update():
-    current_scene.update()
+def update(dt):
+    current_scene.update(dt)
 
 def on_key_down(key):
     current_scene.on_key_down(key)
