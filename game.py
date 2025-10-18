@@ -37,6 +37,28 @@ class TileSet:
                     result.append(Tile(((x * 32) + 16, (y * 32) + 16)))
         return result
     
+    def create_player(self):
+        for y in range(len(self.tileset_array)):
+            for x in range(len(self.tileset_array[y])):
+                if self.tileset_array[y][x] == 3:
+                    return Character(self, ((x * 32) + 16, (y * 32) + 16))
+        return None
+    
+    def create_enemies(self):
+        result = []
+        for y in range(len(self.tileset_array)):
+            for x in range(len(self.tileset_array[y])):
+                if self.tileset_array[y][x] == 2:
+                    result.append(Enemy(((x * 32) + 16, (y * 32) + 8)))
+        return result
+    
+    def create_item(self):
+        for y in range(len(self.tileset_array)):
+            for x in range(len(self.tileset_array[y])):
+                if self.tileset_array[y][x] == 4:
+                    return Item(((x * 32) + 16, (y * 32) + 16))
+        return None
+    
     def has_tile_at_position(self, pos):
         index_x: int = int(pos[0] / 32.0)
         index_y: int = int(pos[1] / 32.0)
@@ -44,7 +66,7 @@ class TileSet:
         if index_x < 0 or index_y < 0 or index_y >= len(self.tileset_array) or index_x >= len(self.tileset_array[index_y]):
             return False
         
-        return True if (self.tileset_array[index_y][index_x] != 0) else False
+        return True if (self.tileset_array[index_y][index_x] == 1) else False
 
 class Enemy:
     def __init__(self, pos):
@@ -53,14 +75,47 @@ class Enemy:
     
     def draw(self):
         self.actor.draw()
+
+class Lives:
+    def __init__(self, pos):
+        self.actor = Actor('heart')
+        self.actor.pos = pos
+        self.amount = 3
     
+    def draw(self):
+        initial_x = self.actor.x
+        self.actor.x -= 16
+        for i in range(self.amount):
+            self.actor.x += 16
+            self.actor.draw()
+        self.actor.x = initial_x
+    
+    def hurt(self):
+        if self.amount > 0:
+            self.amount -= 1
+
+class Item:
+    def __init__(self, pos):
+        self.actor = Actor('item')
+        self.actor.pos = pos
+        self.sprite_animation_length = 15
+        self.sprite_animation_frames_passed = 0
+    
+    def draw(self):
+        self.sprite_animation_frames_passed += 1
+        if self.sprite_animation_frames_passed >= self.sprite_animation_length:
+            if self.actor.image == 'item':
+                self.actor.image = 'item2'
+            elif self.actor.image == 'item2':
+                self.actor.image = 'item'
+            self.sprite_animation_frames_passed = 0
+        self.actor.draw()
 
 class Character:
     def __init__(self, tileset, pos):
         self.actor = Actor('character')
         self.actor.pos = pos
         self.starting_pos = pos
-        self.lives = 3
         self.speed = 2.0
         self.gravity = 0.5
         self.jump_force = 10.0
@@ -89,6 +144,12 @@ class Character:
             vel[0] += self.speed
         
         self.apply_movement(vel)
+    
+    def respawn(self):
+        self.actor.pos = self.starting_pos
+        self.y_vel = 0.0
+        self.is_on_ceiling = False
+        self.is_on_floor = False
     
     def apply_movement(self, vel):
         self.apply_vertical_collision(vel)
@@ -155,7 +216,6 @@ class MainMenuButton:
     
     def draw(self, color, owidth=0):
         screen.draw.text(self.text, center=self.pos, color=color, ocolor='black', owidth=owidth, fontsize=32)
-        screen.draw.rect(self.rect, 'green')
 
 class GameScene:
     def __init__(self):
@@ -164,27 +224,45 @@ class GameScene:
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ]
         self.tileset = TileSet(tileset_array)
-        self.character = Character(self.tileset, (256, 224))
+        self.enemies = self.tileset.create_enemies()
+        self.character = self.tileset.create_player()
+        self.item = self.tileset.create_item()
+        self.lives = Lives((16, 16))
     
     def draw(self):
         screen.clear()
         self.tileset.draw()
         self.character.draw()
+        self.lives.draw()
+        for enemy in self.enemies:
+            enemy.draw()
+        self.item.draw()
     
     def update(self, dt):
         self.character.update()
+        for enemy in self.enemies:
+            if self.character.actor.colliderect(enemy.actor):
+                self.lives.hurt()
+                if self.lives.amount > 0:
+                    self.character.respawn()
+                else:
+                    global current_scene
+                    current_scene = LossScene()
+                break
+        if self.character.actor.colliderect(self.item.actor):
+            current_scene = VictoryScene()
     
     def on_key_down(self, key):
         pass
@@ -237,6 +315,37 @@ class MainMenuScene:
                 self.selected_button_index = 0
         elif key == keys.RETURN:
             self.buttons[self.selected_button_index].on_pressed()
+
+class VictoryScene:
+    def __init__(self):
+        self.background = Actor('background-victory')
+    
+    def draw(self):
+        self.background.draw()
+    
+    def update(self, dt):
+        pass
+    
+    def on_key_down(self, key):
+        if key == keys.RETURN:
+            global current_scene
+            current_scene = MainMenuScene()
+
+class LossScene:
+    def __init__(self):
+        self.background = Actor('background-loss')
+    
+    def draw(self):
+        self.background.draw()
+        
+    
+    def update(self, dt):
+        pass
+    
+    def on_key_down(self, key):
+        if key == keys.RETURN:
+            global current_scene
+            current_scene = MainMenuScene()
 
 current_scene = MainMenuScene()
 
