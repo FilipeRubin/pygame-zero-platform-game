@@ -1,6 +1,6 @@
 import time
 import ctypes
-ctypes.windll.shcore.SetProcessDpiAwareness(1)
+#ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 import pgzrun
 import random
@@ -50,7 +50,7 @@ class TileSet:
         for y in range(len(self.tileset_array)):
             for x in range(len(self.tileset_array[y])):
                 if self.tileset_array[y][x] == 2:
-                    result.append(Enemy(((x * 32) + 16, (y * 32) + 8)))
+                    result.append(Enemy(((x * 32) + 16, (y * 32) + 16)))
         return result
     
     def create_item(self):
@@ -73,9 +73,23 @@ class Enemy:
     def __init__(self, pos):
         self.actor = Actor('enemy')
         self.actor.pos = pos
+        self.pos1 = pos
+        self.pos2 = (pos[0] + 64, pos[1])
+        self.animation1 = animate(self.actor, pos=self.pos2, duration=2.0)
+        self.animation2 = None
+        self.current_animation = self.animation1
     
     def draw(self):
         self.actor.draw()
+    
+    def update(self):
+        if not self.current_animation.running:
+            if self.current_animation == self.animation1:
+                self.animation2 = animate(self.actor, pos=self.pos1, duration=2.0)
+                self.current_animation = self.animation2
+            else:
+                self.animation1 = animate(self.actor, pos=self.pos2, duration=2.0)
+                self.current_animation = self.animation1
 
 class Lives:
     def __init__(self, pos):
@@ -153,53 +167,53 @@ class Character:
         self.is_on_floor = False
     
     def apply_movement(self, vel):
-        self.apply_vertical_collision(vel)
-        self.apply_horizontal_collision(vel)
+        self.apply_vertical_collision(vel[1])
+        self.apply_horizontal_collision(vel[0])
     
-    def apply_vertical_collision(self, vel):
+    def apply_vertical_collision(self, vel_y):
         side = 0
         
-        if vel[1] > 0.0:
+        if vel_y > 0.0:
             side = 1
-        elif vel[1] < 0.0:
+        elif vel_y < 0.0:
             side = -1
         
         p1 = self.actor.bottomleft if side == 1 else self.actor.topleft
         p2 = self.actor.bottomright if side == 1 else self.actor.topright
         p1 = (p1[0] + 1, p1[1])
         p2 = (p2[0] - 1, p2[1])
-        t1 = self.tileset.has_tile_at_position(p1)
-        t2 = self.tileset.has_tile_at_position(p2)
+        t1 = self.tileset.has_tile_at_position((p1[0], p1[1] + vel_y))
+        t2 = self.tileset.has_tile_at_position((p2[0], p2[1] + vel_y))
         
         if not t1 and not t2:
-            self.actor.y += vel[1]
+            self.actor.y += vel_y
             self.is_on_floor = False
             self.is_on_ceiling = False
         elif side == 1:
-            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - (self.actor.midbottom[1] % 32))
+            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] + 31 - (self.actor.midbottom[1] % 32))
             self.is_on_floor = True
         elif side == -1:
             side_y = self.actor.top
-            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - (self.actor.midbottom[1] % 32) - (side_y - self.actor.midbottom[1]) + 1)
+            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - 31 - (self.actor.midbottom[1] % 32) - (side_y - self.actor.midbottom[1]) + 1)
             self.is_on_ceiling = True
-        
-    def apply_horizontal_collision(self, vel):
+    
+    def apply_horizontal_collision(self, vel_x):
         side = 0
         
-        if vel[0] > 0.0:
+        if vel_x > 0.0:
             side = 1
-        elif vel[0] < 0.0:
+        elif vel_x < 0.0:
             side = -1
         
         p1 = self.actor.topright if side == 1 else self.actor.topleft
         p2 = self.actor.bottomright if side == 1 else self.actor.bottomleft
         p1 = (p1[0], p1[1] + 1)
         p2 = (p2[0], p2[1] - 1)
-        t1 = self.tileset.has_tile_at_position(p1)
-        t2 = self.tileset.has_tile_at_position(p2)
+        t1 = self.tileset.has_tile_at_position((p1[0] + vel_x, p1[1]))
+        t2 = self.tileset.has_tile_at_position((p2[0] + vel_x, p2[1]))
         
         if not t1 and not t2:
-            self.actor.x += vel[0]
+            self.actor.x += vel_x
         elif side == 1:
             side_x = self.actor.right
             self.actor.midbottom = (self.actor.center[0] - (self.actor.center[0] % 32) + 32 - (side_x - self.actor.center[0]), self.actor.midbottom[1])
@@ -220,20 +234,21 @@ class MainMenuButton:
 
 class GameScene:
     def __init__(self):
+        self.background = Actor('background')
         tileset_array = [
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 1],
+            [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 4],
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ]
         self.tileset = TileSet(tileset_array)
@@ -243,7 +258,7 @@ class GameScene:
         self.lives = Lives((16, 16))
     
     def draw(self):
-        screen.clear()
+        self.background.draw()
         self.tileset.draw()
         self.character.draw()
         self.lives.draw()
@@ -254,16 +269,33 @@ class GameScene:
     def update(self, dt):
         self.character.update()
         for enemy in self.enemies:
+            enemy.update()
             if self.character.actor.colliderect(enemy.actor):
-                self.lives.hurt()
-                if self.lives.amount > 0:
-                    self.character.respawn()
-                else:
-                    global current_scene
-                    current_scene = LossScene()
+                self.take_damage()
                 break
+        
+        if not self.is_character_within_bounds():
+            self.take_damage()
+        
         if self.character.actor.colliderect(self.item.actor):
             current_scene = VictoryScene()
+    
+    def is_character_within_bounds(self):
+        return not (
+            self.character.actor.right < 0.0 or
+            self.character.actor.left > WIDTH or
+            self.character.actor.top < 0.0 or
+            self.character.actor.bottom > HEIGHT
+        )
+    
+    def take_damage(self):
+        self.lives.hurt()
+        if self.lives.amount > 0:
+            self.character.respawn()
+        else:
+            global current_scene
+            current_scene = LossScene()
+
     
     def on_key_down(self, key):
         pass
@@ -281,7 +313,6 @@ def on_quit_pressed():
 
 class MainMenuScene:
     def __init__(self):
-        self.background = Actor('background')
         self.buttons = [
             MainMenuButton('Play', (256, 196), on_play_pressed),
             MainMenuButton('Music', (256, 224), on_music_pressed),
@@ -291,7 +322,7 @@ class MainMenuScene:
         self.last_mouse_pos = mouse_pos
     
     def draw(self):
-        self.background.draw()
+        screen.clear()
         for i in range(len(self.buttons)):
             if i == self.selected_button_index:
                 self.buttons[i].draw('orange', 1)
