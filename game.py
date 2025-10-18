@@ -11,6 +11,7 @@ HEIGHT = 448
 mouse_pos = (0, 0)
 
 current_scene = None
+music_on: bool = True
 
 class Tile:
     def __init__(self, pos):
@@ -272,7 +273,8 @@ def on_play_pressed():
     current_scene = GameScene()
 
 def on_music_pressed():
-    print('music!')
+    global music_on
+    music_on = not music_on
 
 def on_quit_pressed():
     quit()
@@ -297,6 +299,7 @@ class MainMenuScene:
                 self.buttons[i].draw('white')
     
     def update(self, dt):
+        self.buttons[1].text = 'Music on' if music_on else 'Music off'
         if self.last_mouse_pos != mouse_pos:
             for i in range(len(self.buttons)):
                 if self.buttons[i].rect.collidepoint(mouse_pos):
@@ -322,6 +325,7 @@ class VictoryScene:
     
     def draw(self):
         self.background.draw()
+        screen.draw.text('Congratulations!\nYou are now free from the monsters!\n\nPress Enter to continue...', center=(WIDTH/2, HEIGHT/2), color='white', fontsize=30, align='center')
     
     def update(self, dt):
         pass
@@ -337,7 +341,7 @@ class LossScene:
     
     def draw(self):
         self.background.draw()
-        
+        screen.draw.text('You did well, but the enemies did better.\nGood luck next time!\n\nPress Enter to continue...', center=(WIDTH/2, HEIGHT/2), color='white', fontsize=30, align='center')
     
     def update(self, dt):
         pass
