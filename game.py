@@ -1,3 +1,7 @@
+import time
+import ctypes
+ctypes.windll.shcore.SetProcessDpiAwareness(1)
+
 import pgzrun
 import random
 
@@ -42,32 +46,104 @@ class TileSet:
         
         return True if (self.tileset_array[index_y][index_x] != 0) else False
 
+class Enemy:
+    def __init__(self, pos):
+        self.actor = Actor('enemy')
+        self.actor.pos = pos
+    
+    def draw(self):
+        self.actor.draw()
+    
+
 class Character:
-    def __init__(self, tileset):
+    def __init__(self, tileset, pos):
         self.actor = Actor('character')
-        self.speed = 5.0
+        self.actor.pos = pos
+        self.starting_pos = pos
+        self.lives = 3
+        self.speed = 2.0
+        self.gravity = 0.5
+        self.jump_force = 10.0
+        self.y_vel = 0.0
         self.tileset = tileset
+        self.is_on_floor = False
+        self.is_on_ceiling = False
     
     def draw(self):
         self.actor.draw()
     
     def update(self):
-        vel = [0.0, 0.0]
+        if self.is_on_floor:
+            self.y_vel = 0.0
+            if keyboard.z:
+                self.y_vel = -self.jump_force
+        else:
+            if self.is_on_ceiling:
+                self.y_vel = 0.0
+            self.y_vel += self.gravity
+        
+        vel = [0.0, self.y_vel]
         if keyboard.left:
             vel[0] -= self.speed
         if keyboard.right:
             vel[0] += self.speed
-        if keyboard.up:
-            vel[1] -= self.speed
-        if keyboard.down:
-            vel[1] += self.speed
         
         self.apply_movement(vel)
     
     def apply_movement(self, vel):
-        if not self.tileset.has_tile_at_position((self.actor.x + vel[0], self.actor.y + vel[1])):
-            self.actor.x += vel[0]
+        self.apply_vertical_collision(vel)
+        self.apply_horizontal_collision(vel)
+    
+    def apply_vertical_collision(self, vel):
+        side = 0
+        
+        if vel[1] > 0.0:
+            side = 1
+        elif vel[1] < 0.0:
+            side = -1
+        
+        p1 = self.actor.bottomleft if side == 1 else self.actor.topleft
+        p2 = self.actor.bottomright if side == 1 else self.actor.topright
+        p1 = (p1[0] + 1, p1[1])
+        p2 = (p2[0] - 1, p2[1])
+        t1 = self.tileset.has_tile_at_position(p1)
+        t2 = self.tileset.has_tile_at_position(p2)
+        
+        if not t1 and not t2:
             self.actor.y += vel[1]
+            self.is_on_floor = False
+            self.is_on_ceiling = False
+        elif side == 1:
+            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - (self.actor.midbottom[1] % 32))
+            self.is_on_floor = True
+        elif side == -1:
+            side_y = self.actor.top
+            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - (self.actor.midbottom[1] % 32) - (side_y - self.actor.midbottom[1]) + 1)
+            self.is_on_ceiling = True
+        
+    def apply_horizontal_collision(self, vel):
+        side = 0
+        
+        if vel[0] > 0.0:
+            side = 1
+        elif vel[0] < 0.0:
+            side = -1
+        
+        p1 = self.actor.topright if side == 1 else self.actor.topleft
+        p2 = self.actor.bottomright if side == 1 else self.actor.bottomleft
+        p1 = (p1[0], p1[1] + 1)
+        p2 = (p2[0], p2[1] - 1)
+        t1 = self.tileset.has_tile_at_position(p1)
+        t2 = self.tileset.has_tile_at_position(p2)
+        
+        if not t1 and not t2:
+            self.actor.x += vel[0]
+        elif side == 1:
+            side_x = self.actor.right
+            self.actor.midbottom = (self.actor.center[0] - (self.actor.center[0] % 32) + 32 - (side_x - self.actor.center[0]), self.actor.midbottom[1])
+        elif side == -1:
+            side_x = self.actor.left
+            self.actor.midbottom = (self.actor.center[0] - (self.actor.center[0] % 32) - 1 - (side_x - self.actor.center[0]), self.actor.midbottom[1])
 
 class MainMenuButton:
     def __init__(self, text, pos, on_pressed):
@@ -97,10 +173,10 @@ class GameScene:
             [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ]
         self.tileset = TileSet(tileset_array)
-        self.character = Character(self.tileset)
+        self.character = Character(self.tileset, (256, 224))
     
     def draw(self):
         screen.clear()
