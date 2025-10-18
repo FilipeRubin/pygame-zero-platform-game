@@ -150,7 +150,7 @@ class Character:
         else:
             if self.is_on_ceiling:
                 self.y_vel = 0.0
-            self.y_vel += self.gravity
+            self.y_vel += self.gravity        
         
         vel = [0.0, self.y_vel]
         if keyboard.left:
@@ -190,12 +190,19 @@ class Character:
             self.is_on_floor = False
             self.is_on_ceiling = False
         elif side == 1:
-            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] + 31 - (self.actor.midbottom[1] % 32))
+            side_y = self.actor.bottom
+            distance_to_tile = (self.actor.midbottom[1] % 32.0)
+            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - distance_to_tile + 31)
             self.is_on_floor = True
+            self.y_vel = 0.0
         elif side == -1:
             side_y = self.actor.top
-            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - 31 - (self.actor.midbottom[1] % 32) - (side_y - self.actor.midbottom[1]) + 1)
+            distance_to_tile = (self.actor.midbottom[1] % 32.0)
+            if distance_to_tile > 16.0:
+                distance_to_tile = 0.0
+            self.actor.midbottom = (self.actor.midbottom[0], self.actor.midbottom[1] - distance_to_tile)
             self.is_on_ceiling = True
+            self.y_vel = 0.0
     
     def apply_horizontal_collision(self, vel_x):
         side = 0
@@ -238,18 +245,18 @@ class GameScene:
         tileset_array = [
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0],
             [0, 0, 1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 4],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1]
         ]
         self.tileset = TileSet(tileset_array)
         self.enemies = self.tileset.create_enemies()
@@ -278,13 +285,13 @@ class GameScene:
             self.take_damage()
         
         if self.character.actor.colliderect(self.item.actor):
+            global current_scene
             current_scene = VictoryScene()
     
     def is_character_within_bounds(self):
         return not (
             self.character.actor.right < 0.0 or
             self.character.actor.left > WIDTH or
-            self.character.actor.top < 0.0 or
             self.character.actor.bottom > HEIGHT
         )
     
