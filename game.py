@@ -12,6 +12,7 @@ mouse_pos = (0, 0)
 
 current_scene = None
 music_on: bool = True
+sfx_on: bool = True
 
 class Tile:
     def __init__(self, pos):
@@ -147,6 +148,8 @@ class Character:
             self.y_vel = 0.0
             if keyboard.z:
                 self.y_vel = -self.jump_force
+                if sfx_on:
+                    sounds.jump.play()
         else:
             if self.is_on_ceiling:
                 self.y_vel = 0.0
@@ -233,8 +236,8 @@ class MainMenuButton:
         x, y = pos
         self.text = text
         self.pos = pos
-        self.rect = Rect((x - 40, y - 14), (80, 28))
         self.on_pressed = on_pressed
+        self.rect = Rect((x - 40, y - 14), (80, 28))
     
     def draw(self, color, owidth=0):
         screen.draw.text(self.text, center=self.pos, color=color, ocolor='black', owidth=owidth, fontsize=32)
@@ -263,6 +266,9 @@ class GameScene:
         self.character = self.tileset.create_player()
         self.item = self.tileset.create_item()
         self.lives = Lives((16, 16))
+        global music_on
+        if music_on:
+            music.play('spaced')
     
     def draw(self):
         self.background.draw()
@@ -297,14 +303,18 @@ class GameScene:
     
     def take_damage(self):
         self.lives.hurt()
+        if sfx_on:
+            sounds.hurt.play()
         if self.lives.amount > 0:
             self.character.respawn()
         else:
             global current_scene
             current_scene = LossScene()
-
     
     def on_key_down(self, key):
+        pass
+    
+    def on_mouse_down(self, pos, button):
         pass
 
 def on_play_pressed():
@@ -315,18 +325,24 @@ def on_music_pressed():
     global music_on
     music_on = not music_on
 
+def on_sfx_pressed():
+    global sfx_on
+    sfx_on = not sfx_on
+
 def on_quit_pressed():
     quit()
 
 class MainMenuScene:
     def __init__(self):
         self.buttons = [
-            MainMenuButton('Play', (256, 196), on_play_pressed),
-            MainMenuButton('Music', (256, 224), on_music_pressed),
-            MainMenuButton('Quit', (256, 252), on_quit_pressed)
+            MainMenuButton('Play', (256, 170), on_play_pressed),
+            MainMenuButton('Music', (256, 206), on_music_pressed),
+            MainMenuButton('Sounds', (256, 242), on_sfx_pressed),
+            MainMenuButton('Quit', (256, 278), on_quit_pressed)
         ]
         self.selected_button_index = 0
         self.last_mouse_pos = mouse_pos
+        music.stop()
     
     def draw(self):
         screen.clear()
@@ -338,6 +354,7 @@ class MainMenuScene:
     
     def update(self, dt):
         self.buttons[1].text = 'Music on' if music_on else 'Music off'
+        self.buttons[2].text = 'Sounds on' if sfx_on else 'Sounds off'
         if self.last_mouse_pos != mouse_pos:
             for i in range(len(self.buttons)):
                 if self.buttons[i].rect.collidepoint(mouse_pos):
@@ -356,6 +373,10 @@ class MainMenuScene:
                 self.selected_button_index = 0
         elif key == keys.RETURN:
             self.buttons[self.selected_button_index].on_pressed()
+    
+    def on_mouse_down(self, pos, button):
+        if button == mouse.LEFT and self.buttons[self.selected_button_index].rect.collidepoint(pos):
+            self.buttons[self.selected_button_index].on_pressed()
 
 class VictoryScene:
     def __init__(self):
@@ -372,6 +393,9 @@ class VictoryScene:
         if key == keys.RETURN:
             global current_scene
             current_scene = MainMenuScene()
+    
+    def on_mouse_down(self, pos, button):
+        pass
 
 class LossScene:
     def __init__(self):
@@ -388,6 +412,9 @@ class LossScene:
         if key == keys.RETURN:
             global current_scene
             current_scene = MainMenuScene()
+    
+    def on_mouse_down(self, pos, button):
+        pass
 
 current_scene = MainMenuScene()
 
@@ -403,5 +430,8 @@ def on_key_down(key):
 def on_mouse_move(pos):
     global mouse_pos
     mouse_pos = pos
+
+def on_mouse_down(pos, button):
+    current_scene.on_mouse_down(pos, button)
 
 pgzrun.go()
