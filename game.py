@@ -1,7 +1,3 @@
-import time
-import ctypes
-#ctypes.windll.shcore.SetProcessDpiAwareness(1)
-
 import pgzrun
 import random
 
@@ -137,6 +133,7 @@ class Character:
         self.jump_force = 10.0
         self.y_vel = 0.0
         self.tileset = tileset
+        self.pressed_jump = False
         self.is_on_floor = False
         self.is_on_ceiling = False
     
@@ -146,7 +143,8 @@ class Character:
     def update(self):
         if self.is_on_floor:
             self.y_vel = 0.0
-            if keyboard.z:
+            if self.pressed_jump:
+                self.pressed_jump = False
                 self.y_vel = -self.jump_force
                 if sfx_on:
                     sounds.jump.play()
@@ -162,6 +160,10 @@ class Character:
             vel[0] += self.speed
         
         self.apply_movement(vel)
+    
+    def on_key_down(self, key):
+        if key == keys.SPACE:
+            self.pressed_jump = True
     
     def respawn(self):
         self.actor.pos = self.starting_pos
@@ -312,7 +314,7 @@ class GameScene:
             current_scene = LossScene()
     
     def on_key_down(self, key):
-        pass
+        self.character.on_key_down(key)
     
     def on_mouse_down(self, pos, button):
         pass
